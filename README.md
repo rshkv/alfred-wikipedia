@@ -5,6 +5,8 @@ This workflow lets you search the Wikipedia.
 ![Alfred wikipedia preview](https://www.dropbox.com/s/xe4opc8cj6rz07h/alfred-wikipedia.png?dl=1)
 
 ## Usage
+Use `w` as keyword.
+
 Keys              | Action
 ----------------- | ------
 `↩`               | Open Wikipedia article
