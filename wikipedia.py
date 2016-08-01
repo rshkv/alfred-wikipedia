@@ -1,4 +1,5 @@
 #!/usr/bin/python
+import unicodedata
 import json
 import sys
 import os
@@ -10,6 +11,8 @@ def lookup_results(query, max_hits):
     """Find DBpedia entities whose label matches the query. Results are ordered
     by the number of inlinks pointing from other articles.
     """
+    # Convert Alfred's decomposed utf-8 to composed as expected by the endpoint
+    query = unicodedata.normalize('NFC', query.decode('utf-8')).encode('utf-8')
     response = requests.get(
         url="http://lookup.dbpedia.org/api/search/PrefixSearch",
         params={
@@ -85,7 +88,6 @@ if __name__ == "__main__":
     # Get matches for input
     hits = lookup_results(query, max_hits)
     hits = uris(hits)
-    hits.insert(0, {'title': query})
     # Return Alfred output
     output = alfred_output(hits)
     print(output)
