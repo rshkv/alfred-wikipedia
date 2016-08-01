@@ -77,6 +77,9 @@ def alfred_output(results):
                      },
                  }
              } for result in results]
+    # Filter None values
+    items = [{k: v for k, v in item.items() if v is not None}
+             for item in items]
     # Return results as encoded JSON
     return json.dumps({'items': items}, ensure_ascii=False).encode('utf-8')
 
