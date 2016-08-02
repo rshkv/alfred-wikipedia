@@ -24,6 +24,8 @@ def lookup_results(query, max_hits):
             "Accept": "application/json"
         }
     )
+    # Raise error on 4xx and 5xx status codes
+    response.raise_for_status()
     return json.loads(response.content.decode('utf-8'))['results']
 
 
@@ -40,43 +42,43 @@ def uris(results):
                            'https://en.m.wikipedia.org/wiki/') + '#content'
 
     return [{
-                'title': result['label'],
-                'description': result['description'],
-                'wikipedia_uri': dbp_wiki(result['uri']),
-                'mobile_uri': dbp_to_mobile(result['uri']),
-                'dbpedia_uri': result['uri']
-            } for result in results]
+        'title': result['label'],
+        'description': result['description'],
+        'wikipedia_uri': dbp_wiki(result['uri']),
+        'mobile_uri': dbp_to_mobile(result['uri']),
+        'dbpedia_uri': result['uri']
+    } for result in results]
 
 
 def alfred_output(results):
     """Return Alfred output.
     """
     items = [{
-                 'title': result['title'],
-                 'subtitle': result['description'],
+        'title': result['title'],
+        'subtitle': result['description'],
 
-                 'arg': result['wikipedia_uri'],  # Passed on to action
-                 'uid': result['wikipedia_uri'],  # Used to learn order
-                 'autocomplete': result['title'],  # Added to search field
+        'arg': result['wikipedia_uri'],  # Passed on to action
+        'uid': result['wikipedia_uri'],  # Used to learn order
+        'autocomplete': result['title'],  # Added to search field
 
-                 'quicklookurl': result['mobile_uri'],  # Opened on quick look
-                 'text': {
-                     'copy': result['wikipedia_uri'],  # Pasted to clipboard
-                     'largetype': result['description']  # Shown in large type
-                 },
-                 'mods': {
-                     # Hold cmd to open mobile Wikipedia (better for reading)
-                     'cmd': {
-                         'arg': result['mobile_uri'],
-                         'subtitle': 'Open in mobile version'
-                     },
-                     # Hold ctrl to open DBpedia resource
-                     'ctrl': {
-                         'arg': result['dbpedia_uri'],
-                         'subtitle': 'Open in DBpedia'
-                     },
-                 }
-             } for result in results]
+        'quicklookurl': result['mobile_uri'],  # Opened on quick look
+        'text': {
+            'copy': result['wikipedia_uri'],  # Pasted to clipboard
+            'largetype': result['description']  # Shown in large type
+        },
+        'mods': {
+            # Hold cmd to open mobile Wikipedia (better for reading)
+            'cmd': {
+                'arg': result['mobile_uri'],
+                'subtitle': 'Open in mobile version'
+            },
+            # Hold ctrl to open DBpedia resource
+            'ctrl': {
+                'arg': result['dbpedia_uri'],
+                'subtitle': 'Open in DBpedia'
+            },
+        }
+    } for result in results]
     # Filter None values
     items = [{k: v for k, v in item.items() if v is not None}
              for item in items]
@@ -84,13 +86,24 @@ def alfred_output(results):
     return json.dumps({'items': items}, ensure_ascii=False).encode('utf-8')
 
 
+def error_message(exception):
+    output = {'items': [{'title': 'Endpoint currently not answering',
+                         'subtitle': str(exception).split(':')[0]}]}
+    return json.dumps(output)
+
+
 if __name__ == "__main__":
     # Get input
     query = sys.argv[1]
     max_hits = os.getenv('maxHits') or 9
-    # Get matches for input
-    hits = lookup_results(query, max_hits)
-    hits = uris(hits)
-    # Return Alfred output
-    output = alfred_output(hits)
-    print(output)
+    # Try connection
+    try:
+        # Get matches for input
+        hits = lookup_results(query, max_hits)
+        hits = uris(hits)
+        # Return Alfred output
+        output = alfred_output(hits)
+        print(output)
+    except requests.exceptions.RequestException as e:
+        # Return error
+        print(error_message(e))
