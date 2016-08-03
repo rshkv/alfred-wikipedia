@@ -7,89 +7,82 @@ import os
 from lib import requests
 
 
-def lookup_results(query, max_hits):
-    """Find DBpedia entities whose label matches the query. Results are ordered
-    by the number of inlinks pointing from other articles.
+def search(query, max_hits):
+    """Use Wikipedia's search API to find matches
     """
     # Convert Alfred's decomposed utf-8 to composed as expected by the endpoint
-    query = unicodedata.normalize('NFC', query.decode('utf-8')).encode('utf-8')
+    q = unicodedata.normalize('NFC', query.decode('utf-8')).encode('utf-8')
     response = requests.get(
-        url="http://lookup.dbpedia.org/api/search/PrefixSearch",
-        params={
-            "QueryClass": None,
-            "MaxHits": max_hits,
-            "QueryString": query
-        },
-        headers={
-            "Accept": "application/json"
-        }
-    )
+        url='https://en.wikipedia.org/w/api.php',
+        params={'action': 'query',
+                'format': 'json',
+                'utf8': '',
+                # Build generator
+                'generator': 'search',
+                'gsrsearch': q,
+                'gsrlimit': max_hits,
+                # Get properties
+                'prop': 'extracts|info',
+                'explaintext': '',
+                'exintro': '',
+                'exlimit': 'max',
+                'exsentences': '1',
+                'inprop': 'url'})
+
     # Raise error on 4xx and 5xx status codes
     response.raise_for_status()
-    return json.loads(response.content.decode('utf-8'))['results']
+
+    response = json.loads(response.content.decode('utf-8'))
+    results = response['query']['pages'].values()
+    return results
 
 
-def uris(results):
-    """Get Wikipedia and mobile urls from the DBpedia uris of the results.
+def url_to_mobile(url):
+    return url.replace('wikipedia.org', 'm.wikipedia.org') + '#content'
+
+
+def url_to_dbpedia(url):
+    return 'http://dbpedia.org/page/' + url.split('wiki/')[1]
+
+
+def alfred_item(result):
+    """Return result dictionary in Alfred format
     """
+    title = result['title']
+    subtitle = result['extract']
+    url = result['fullurl']
+    mobile_url = url_to_mobile(url)
+    dbpedia_url = url_to_dbpedia(url)
 
-    def dbp_wiki(uri):
-        return uri.replace('http://dbpedia.org/resource/',
-                           'https://en.wikipedia.org/wiki/')
-
-    def dbp_to_mobile(uri):
-        return uri.replace('http://dbpedia.org/resource/',
-                           'https://en.m.wikipedia.org/wiki/') + '#content'
-
-    return [{
-        'title': result['label'],
-        'description': result['description'],
-        'wikipedia_uri': dbp_wiki(result['uri']),
-        'mobile_uri': dbp_to_mobile(result['uri']),
-        'dbpedia_uri': result['uri']
-    } for result in results]
+    return {
+        'title': title,
+        'subtitle': subtitle,
+        'arg': url,  # Passed on to action
+        'uid': title,  # Used to learn order
+        'autocomplete': title,  # Added to search field
+        'quicklookurl': mobile_url,  # Opened on quick look
+        'text': {'copy': url,  # Pasted to clipboard
+                 'largetype': title},  # Shown in large
+        'mods': {
+            # Hold cmd to open mobile Wikipedia (better for reading)
+            'cmd': {'arg': mobile_url,
+                    'subtitle': 'Open in mobile version'},
+            # Hold ctrl to open DBpedia page
+            'ctrl': {'arg': dbpedia_url,
+                     'subtitle': 'Open in DBpedia'}}}
 
 
 def alfred_output(results):
-    """Return Alfred output.
+    """Return Alfred output
     """
-    items = [{
-        'title': result['title'],
-        'subtitle': result['description'],
-
-        'arg': result['wikipedia_uri'],  # Passed on to action
-        'uid': result['wikipedia_uri'],  # Used to learn order
-        'autocomplete': result['title'],  # Added to search field
-
-        'quicklookurl': result['mobile_uri'],  # Opened on quick look
-        'text': {
-            'copy': result['wikipedia_uri'],  # Pasted to clipboard
-            'largetype': result['description']  # Shown in large type
-        },
-        'mods': {
-            # Hold cmd to open mobile Wikipedia (better for reading)
-            'cmd': {
-                'arg': result['mobile_uri'],
-                'subtitle': 'Open in mobile version'
-            },
-            # Hold ctrl to open DBpedia resource
-            'ctrl': {
-                'arg': result['dbpedia_uri'],
-                'subtitle': 'Open in DBpedia'
-            },
-        }
-    } for result in results]
-    # Filter None values
-    items = [{k: v for k, v in item.items() if v is not None}
-             for item in items]
-    # Return results as encoded JSON
+    items = [alfred_item(result) for result in results]
     return json.dumps({'items': items}, ensure_ascii=False).encode('utf-8')
 
 
 def error_message(exception):
-    output = {'items': [{'title': 'Endpoint currently not answering',
-                         'subtitle': str(exception).split(':')[0]}]}
-    return json.dumps(output)
+    msg = {'items': [{'title': 'Endpoint currently not answering',
+                      'subtitle': str(exception).split(':')[0]}]}
+    return json.dumps(msg)
 
 
 if __name__ == "__main__":
@@ -99,8 +92,7 @@ if __name__ == "__main__":
     # Try connection
     try:
         # Get matches for input
-        hits = lookup_results(query, max_hits)
-        hits = uris(hits)
+        hits = search(query, max_hits)
         # Return Alfred output
         output = alfred_output(hits)
         print(output)
