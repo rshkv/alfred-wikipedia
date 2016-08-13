@@ -67,7 +67,7 @@
 				<key>queuedelayimmediatelyinitially</key>
 				<false/>
 				<key>queuedelaymode</key>
-				<integer>1</integer>
+				<integer>0</integer>
 				<key>queuemode</key>
 				<integer>2</integer>
 				<key>runningsubtext</key>
@@ -116,11 +116,13 @@
 	</dict>
 	<key>variables</key>
 	<dict>
+		<key>defaultLang</key>
+		<string>en</string>
 		<key>maxHits</key>
 		<string>9</string>
 	</dict>
 	<key>version</key>
-	<string>1.2</string>
+	<string>1.3</string>
 	<key>webaddress</key>
 	<string>https://github.com/busfahren/alfred-wikipedia</string>
 </dict>
