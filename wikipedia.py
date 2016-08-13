@@ -6,6 +6,7 @@ import sys
 import os
 
 from lib import requests
+from utils import *
 
 
 def search(query, lang, max_hits):
@@ -41,20 +42,12 @@ def search(query, lang, max_hits):
     return results
 
 
-def url_to_mobile(url):
-    return url.replace('wikipedia.org', 'm.wikipedia.org') + '#content'
-
-
-def url_to_dbpedia(url):
-    return 'http://dbpedia.org/page/' + url.split('wiki/')[1]
-
-
 def language(query):
     lang, query = query.split('.')
     return lang.strip(), query.strip()
 
 
-def alfred_item(result):
+def alfred_item(result, lang):
     """Return result dictionary in Alfred format
     """
     title = result['title']
@@ -68,7 +61,7 @@ def alfred_item(result):
         'subtitle': subtitle,
         'arg': url,  # Passed on to action
         'uid': title,  # Used to learn order
-        'autocomplete': title,  # Added to search field
+        'autocomplete': lang + '. ' + title,  # Added to search field
         'quicklookurl': mobile_url,  # Opened on quick look
         'text': {'copy': url,  # Pasted to clipboard
                  'largetype': title},  # Shown in large
@@ -81,10 +74,10 @@ def alfred_item(result):
                      'subtitle': 'Open in DBpedia'}}}
 
 
-def alfred_output(results):
+def alfred_output(results, lang):
     """Return Alfred output
     """
-    items = [alfred_item(result) for result in results]
+    items = [alfred_item(result, lang) for result in results]
     return json.dumps({'items': items}, ensure_ascii=False).encode('utf-8')
 
 
@@ -94,17 +87,6 @@ def alfred_error(e, query):
         'title': "Search Google for '{0}'".format(query),
         'subtitle': str(message),
         'arg': 'https://www.google.de/#q={0}'.format(query)}]})
-
-
-class ResultsException(Exception):
-    def __init__(self, query):
-        self.message = "'{0}' not found".format(query)
-
-
-class RequestException(Exception):
-    def __init__(self, request):
-        self.message = ('Endpoint not answering ({0})'
-                        .format(request.url.split('?')[0]))
 
 
 if __name__ == "__main__":
@@ -125,7 +107,7 @@ if __name__ == "__main__":
         # Get matches for input
         hits = search(query, lang, max_hits)
         # Return Alfred output
-        output = alfred_output(hits)
+        output = alfred_output(hits, lang)
         print(output)
     except Exception as e:
         # Return error
