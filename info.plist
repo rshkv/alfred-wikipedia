@@ -116,6 +116,8 @@
 	</dict>
 	<key>variables</key>
 	<dict>
+		<key>defaultLang</key>
+		<string>en</string>
 		<key>maxHits</key>
 		<string>9</string>
 	</dict>

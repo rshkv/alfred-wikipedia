@@ -7,13 +7,13 @@ import os
 from lib import requests
 
 
-def search(query, max_hits):
+def search(query, lang, max_hits):
     """Use Wikipedia's search API to find matches
     """
     # Convert Alfred's decomposed utf-8 to composed as expected by the endpoint
     q = unicodedata.normalize('NFC', query.decode('utf-8')).encode('utf-8')
     response = requests.get(
-        url='https://en.wikipedia.org/w/api.php',
+        url='https://{lang}.wikipedia.org/w/api.php'.format(lang=lang),
         params={'action': 'query',
                 'format': 'json',
                 'utf8': '',
@@ -72,6 +72,11 @@ def alfred_item(result):
                      'subtitle': 'Open in DBpedia'}}}
 
 
+def language(query):
+    lang, query = query.split('.')
+    return lang.strip(), query.strip()
+
+
 def alfred_output(results):
     """Return Alfred output
     """
@@ -81,18 +86,22 @@ def alfred_output(results):
 
 def error_message(exception):
     msg = {'items': [{'title': 'Endpoint currently not answering',
-                      'subtitle': str(exception).split(':')[0]}]}
+                      'subtitle': exception.request.url.split('?')[0]}]}
     return json.dumps(msg)
 
 
 if __name__ == "__main__":
-    # Get input
-    query = sys.argv[1]
+    # Get settings
     max_hits = os.getenv('maxHits') or 9
+    lang = os.getenv('defaultLang') or 'en'
+    # Get query
+    query = sys.argv[1]
+    if '.' in query:
+        lang, query = language(query)
     # Try connection
     try:
         # Get matches for input
-        hits = search(query, max_hits)
+        hits = search(query, lang, max_hits)
         # Return Alfred output
         output = alfred_output(hits)
         print(output)
