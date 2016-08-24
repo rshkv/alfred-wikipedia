@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>bundleid</key>
-	<string>com.busfahren.wikipedia</string>
+	<string>com.rshkv.wikipedia</string>
 	<key>category</key>
 	<string>Internet</string>
 	<key>connections</key>
@@ -122,8 +122,8 @@
 		<string>9</string>
 	</dict>
 	<key>version</key>
-	<string>1.3</string>
+	<string>1.4</string>
 	<key>webaddress</key>
-	<string>https://github.com/busfahren/alfred-wikipedia</string>
+	<string>https://github.com/rshkv/alfred-wikipedia</string>
 </dict>
 </plist>

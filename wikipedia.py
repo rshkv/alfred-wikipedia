@@ -6,7 +6,8 @@ import sys
 import os
 
 from lib import requests
-from utils import *
+from utils import url_to_mobile, url_to_dbpedia, \
+    ResultsException, RequestException
 
 
 def search(query, lang, max_hits):
@@ -29,7 +30,6 @@ def search(query, lang, max_hits):
                     'explaintext': '',
                     'exintro': '',
                     'exlimit': 'max',
-                    'exsentences': '1',
                     'inprop': 'url'})
         response.raise_for_status()  # Raise error on 4xx and 5xx status codes
         response = json.loads(response.content.decode('utf-8'))
@@ -51,7 +51,7 @@ def alfred_item(result, lang):
     """Return result dictionary in Alfred format
     """
     title = result['title']
-    subtitle = result['extract']
+    subtitle = result['extract'].replace('\n', ' ')
     url = result['fullurl']
     mobile_url = url_to_mobile(url)
     dbpedia_url = url_to_dbpedia(url)
@@ -89,7 +89,7 @@ def alfred_error(e, query):
         'arg': 'https://www.google.de/#q={0}'.format(query)}]})
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     # Get settings
     max_hits = os.getenv('maxHits') or 9
     lang = os.getenv('defaultLang') or 'en'
