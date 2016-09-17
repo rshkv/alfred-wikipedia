@@ -6,7 +6,7 @@ import sys
 import os
 
 from lib import requests
-from utils import url_to_mobile, url_to_dbpedia, \
+from utils import url_to_mobile, url_to_dbpedia, language_codes, \
     ResultsException, RequestException
 
 
@@ -43,8 +43,16 @@ def search(query, lang, max_hits):
 
 
 def language(query):
-    lang, query = query.split('.')
-    return lang.strip(), query.strip()
+    """Check query for a language code and return language/query.
+    """
+    if ' ' in query and '.' in query:
+        lang_code, new_query = query.split(' ', 1)
+        lang_code = lang_code.replace('.', '').strip()
+        if lang_code in language_codes:
+            return lang_code, new_query
+
+    lang_code = os.getenv('defaultLang') or 'en'
+    return lang_code, query
 
 
 def alfred_item(result, lang):
@@ -90,13 +98,11 @@ def alfred_error(e, query):
 
 
 if __name__ == '__main__':
-    # Get settings
+    # Get maximum number of search results
     max_hits = os.getenv('maxHits') or 9
-    lang = os.getenv('defaultLang') or 'en'
     # Get query
     query = sys.argv[1]
-    if '.' in query:
-        lang, query = language(query)
+    lang, query = language(query)
     # Check non-empty input
     if not query:
         # Keep Alfred from removing the placeholder
